@@ -1,17 +1,33 @@
 "use client"
 
-import { useState } from "react"
-import { Copy } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Copy, Check } from "lucide-react"
 import type { Song } from "@/types/song"
 
 interface SongCardProps {
   song: Song
   selectedCategories: Set<string>
   onCategoryClick: (category: string) => void
+  highlightedCategories?: string[] // 需要突出顯示的分類
 }
 
-export default function SongCard({ song, selectedCategories, onCategoryClick }: SongCardProps) {
-  const [showCopyTooltip, setShowCopyTooltip] = useState(false)
+export default function SongCard({
+  song,
+  selectedCategories,
+  onCategoryClick,
+  highlightedCategories = [],
+}: SongCardProps) {
+  const [isCopied, setIsCopied] = useState(false)
+
+  // 複製成功後重置狀態
+  useEffect(() => {
+    if (isCopied) {
+      const timer = setTimeout(() => {
+        setIsCopied(false)
+      }, 2000)
+      return () => clearTimeout(timer)
+    }
+  }, [isCopied])
 
   const getLanguageColor = (language: string | undefined) => {
     if (!language) return "border-gray-500"
@@ -72,8 +88,7 @@ export default function SongCard({ song, selectedCategories, onCategoryClick }: 
       navigator.clipboard
         .writeText(textToCopy)
         .then(() => {
-          setShowCopyTooltip(true)
-          setTimeout(() => setShowCopyTooltip(false), 2500)
+          setIsCopied(true)
         })
         .catch((err) => {
           console.error("Failed to copy: ", err)
@@ -86,8 +101,7 @@ export default function SongCard({ song, selectedCategories, onCategoryClick }: 
       textArea.select()
       try {
         document.execCommand("copy")
-        setShowCopyTooltip(true)
-        setTimeout(() => setShowCopyTooltip(false), 2500)
+        setIsCopied(true)
       } catch (err) {
         console.error("Fallback: Copy command failed", err)
       }
@@ -122,7 +136,9 @@ export default function SongCard({ song, selectedCategories, onCategoryClick }: 
                   className={`inline-block px-2 py-1 text-xs rounded-full mr-1 mb-1 cursor-pointer ${
                     selectedCategories.has(category)
                       ? "bg-purple-200 text-purple-800 font-medium"
-                      : "bg-purple-100 text-purple-800"
+                      : highlightedCategories.includes(category)
+                        ? "bg-red-100 text-red-800 font-bold"
+                        : "bg-purple-100 text-purple-800"
                   }`}
                   onClick={() => onCategoryClick(category)}
                 >
@@ -140,22 +156,30 @@ export default function SongCard({ song, selectedCategories, onCategoryClick }: 
         </p>
       )}
 
-      {/* Copy button */}
+      {/* Copy button with improved animation */}
       <div className="absolute top-3 right-3">
         <button
-          className="p-2 bg-pink-100 hover:bg-pink-200 text-pink-700 rounded-full focus:outline-none shadow-md transition-all duration-200 hover:-translate-y-1 active:scale-95"
+          className={`p-2 rounded-full focus:outline-none shadow-md transition-all duration-300 ${
+            isCopied
+              ? "bg-green-500 text-white rotate-0 scale-110"
+              : "bg-pink-100 hover:bg-pink-200 text-pink-700 hover:-translate-y-1 active:scale-95"
+          }`}
           onClick={handleCopy}
-          aria-label="複製歌曲資訊"
+          aria-label={isCopied ? "已複製歌曲資訊" : "複製歌曲資訊"}
+          disabled={isCopied}
         >
-          <Copy className="h-5 w-5" />
-          <span
-            className={`absolute -top-8 right-0 bg-indigo-600 text-white text-xs px-2 py-1 rounded pointer-events-none transition-opacity ${
-              showCopyTooltip ? "opacity-100" : "opacity-0"
-            }`}
-          >
-            已複製!
-          </span>
+          {isCopied ? <Check className="h-5 w-5" /> : <Copy className="h-5 w-5" />}
         </button>
+
+        {/* Toast notification */}
+        <div
+          className={`fixed bottom-4 left-1/2 -translate-x-1/2 bg-black/80 text-white px-4 py-2 rounded-full text-sm shadow-lg transition-all duration-300 flex items-center gap-2 ${
+            isCopied ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"
+          }`}
+        >
+          <Check className="h-4 w-4" />
+          <span>已複製到剪貼簿</span>
+        </div>
       </div>
     </div>
   )

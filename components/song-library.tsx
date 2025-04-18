@@ -9,6 +9,9 @@ import StatsDisplay from "./stats-display"
 import type { Song, CategoryCount } from "@/types/song"
 import BackToTop from "./back-to-top"
 
+// 定義需要突出顯示的分類（粗體字）
+const HIGHLIGHTED_CATEGORIES = ["流行", "抒情", "搖滾", "民謠", "電子", "嘻哈", "爵士", "古典"]
+
 export default function SongLibrary() {
   const [allSongs, setAllSongs] = useState<Song[]>([])
   const [filteredSongs, setFilteredSongs] = useState<Song[]>([])
@@ -20,6 +23,13 @@ export default function SongLibrary() {
   const [categoryCounts, setCategoryCounts] = useState<CategoryCount>({})
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // 歌手和語言分類列表
+  const [artistCategories, setArtistCategories] = useState<string[]>([])
+  const [languageCategories, setLanguageCategories] = useState<string[]>([])
+
+  // 分類的原始順序
+  const [categoryOrder, setCategoryOrder] = useState<Record<string, number>>({})
 
   useEffect(() => {
     fetchSheetData()
@@ -57,7 +67,12 @@ export default function SongLibrary() {
     const newLanguages = new Set<string>()
     const newCategories = new Set<string>()
     const newCategoryCounts: CategoryCount = {}
+    const artists = new Set<string>()
+    const languageSet = new Set<string>()
+    const newCategoryOrder: Record<string, number> = {}
+    const categoryOrderMap = new Map<string, number>()
 
+    // 處理所有歌曲數據
     const processedSongs = data.map((row, index) => {
       const song: Song = {
         id: index + 1,
@@ -71,16 +86,27 @@ export default function SongLibrary() {
 
       if (song.language) {
         newLanguages.add(song.language)
+        languageSet.add(song.language)
+      }
+
+      if (song.artist) {
+        artists.add(song.artist)
       }
 
       if (song.category) {
         const categoryList = song.category.split(",").map((cat) => cat.trim())
         song.categories = categoryList
 
+        // 記錄每個分類的出現順序
         categoryList.forEach((cat) => {
           if (cat) {
             newCategories.add(cat)
             newCategoryCounts[cat] = (newCategoryCounts[cat] || 0) + 1
+
+            // 只記錄第一次出現的順序
+            if (!categoryOrderMap.has(cat)) {
+              categoryOrderMap.set(cat, categoryOrderMap.size)
+            }
           }
         })
       }
@@ -88,11 +114,21 @@ export default function SongLibrary() {
       return song
     })
 
+    // 將 Map 轉換為普通對象
+    categoryOrderMap.forEach((order, category) => {
+      newCategoryOrder[category] = order
+    })
+
     setAllSongs(processedSongs)
     setFilteredSongs(processedSongs)
     setLanguages(newLanguages)
     setCategories(newCategories)
     setCategoryCounts(newCategoryCounts)
+    setCategoryOrder(newCategoryOrder)
+
+    // 設置歌手和語言分類
+    setArtistCategories(Array.from(artists))
+    setLanguageCategories(Array.from(languageSet))
   }
 
   const filterSongs = () => {
@@ -204,6 +240,10 @@ export default function SongLibrary() {
             categoryCounts={categoryCounts}
             onToggleCategory={handleCategoryToggle}
             onClearCategories={clearCategories}
+            artistCategories={artistCategories}
+            languageCategories={languageCategories}
+            categoryOrder={categoryOrder}
+            highlightedCategories={HIGHLIGHTED_CATEGORIES}
           />
 
           {/* Active filters */}
@@ -220,7 +260,11 @@ export default function SongLibrary() {
                   {Array.from(selectedCategories).map((category) => (
                     <div
                       key={category}
-                      className="filter-tag bg-purple-200 text-purple-800 cursor-pointer text-xs px-2 py-1 rounded-full flex items-center mr-2 mb-1"
+                      className={`filter-tag cursor-pointer text-xs px-2 py-1 rounded-full flex items-center mr-2 mb-1 ${
+                        HIGHLIGHTED_CATEGORIES.includes(category)
+                          ? "bg-red-200 text-red-800 font-bold"
+                          : "bg-purple-200 text-purple-800"
+                      }`}
                       onClick={() => handleCategoryToggle(category)}
                     >
                       <span>{category}</span>
@@ -284,6 +328,7 @@ export default function SongLibrary() {
                     song={song}
                     selectedCategories={selectedCategories}
                     onCategoryClick={handleCategoryToggle}
+                    highlightedCategories={HIGHLIGHTED_CATEGORIES}
                   />
                 ))}
               </div>

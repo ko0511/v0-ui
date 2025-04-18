@@ -24,6 +24,20 @@ body {
   }
 }
 
+/* 隱藏水平滾動條但保持功能 */
+.hide-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */ /* Firefox */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;
