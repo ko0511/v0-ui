@@ -1,11 +1,12 @@
 "use client"
 
-import type { CategoryCount } from "@/types/song"
+import type { CategoryCount, CategoryOrder } from "@/types/song"
 
 interface CategoryFilterProps {
   categories: string[]
   selectedCategories: Set<string>
   categoryCounts: CategoryCount
+  categoryOrder: CategoryOrder
   onToggleCategory: (category: string) => void
   onClearCategories: () => void
 }
@@ -14,12 +15,16 @@ export default function CategoryFilter({
   categories,
   selectedCategories,
   categoryCounts,
+  categoryOrder,
   onToggleCategory,
   onClearCategories,
 }: CategoryFilterProps) {
-  // Sort categories by count (highest to lowest)
+  // 按照原始順序排序分類
   const sortedCategories = [...categories].sort((a, b) => {
-    return (categoryCounts[b] || 0) - (categoryCounts[a] || 0)
+    // 如果沒有順序信息，則使用默認順序
+    const orderA = categoryOrder[a] !== undefined ? categoryOrder[a] : Number.MAX_SAFE_INTEGER
+    const orderB = categoryOrder[b] !== undefined ? categoryOrder[b] : Number.MAX_SAFE_INTEGER
+    return orderA - orderB
   })
 
   return (

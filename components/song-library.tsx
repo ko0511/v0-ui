@@ -6,7 +6,7 @@ import SongCard from "./song-card"
 import CategoryFilter from "./category-filter"
 import LanguageFilter from "./language-filter"
 import StatsDisplay from "./stats-display"
-import type { Song, CategoryCount } from "@/types/song"
+import type { Song, CategoryCount, CategoryOrder } from "@/types/song"
 import BackToTop from "./back-to-top"
 
 export default function SongLibrary() {
@@ -18,6 +18,7 @@ export default function SongLibrary() {
   const [languages, setLanguages] = useState<Set<string>>(new Set())
   const [categories, setCategories] = useState<Set<string>>(new Set())
   const [categoryCounts, setCategoryCounts] = useState<CategoryCount>({})
+  const [categoryOrder, setCategoryOrder] = useState<CategoryOrder>({})
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -57,7 +58,21 @@ export default function SongLibrary() {
     const newLanguages = new Set<string>()
     const newCategories = new Set<string>()
     const newCategoryCounts: CategoryCount = {}
+    const newCategoryOrder: CategoryOrder = {}
 
+    // 首先處理 F 欄的「分類項目」來獲取分類順序
+    data.forEach((row) => {
+      const categoryItem = row.分類項目 || row["分類項目"] || row.CategoryItem || ""
+      if (categoryItem && !newCategoryOrder[categoryItem]) {
+        // 使用 Object.keys(newCategoryOrder).length 作為順序索引
+        // 這樣可以確保按照在試算表中出現的順序排列
+        newCategoryOrder[categoryItem] = Object.keys(newCategoryOrder).length
+        // 同時將其添加到分類集合中
+        newCategories.add(categoryItem)
+      }
+    })
+
+    // 然後處理歌曲數據
     const processedSongs = data.map((row, index) => {
       const song: Song = {
         id: index + 1,
@@ -74,13 +89,20 @@ export default function SongLibrary() {
       }
 
       if (song.category) {
-        const categoryList = song.category.split(",").map((cat) => cat.trim())
+        const categoryList = song.category.split(",").map((cat: string) => cat.trim())
         song.categories = categoryList
 
-        categoryList.forEach((cat) => {
+        categoryList.forEach((cat: string) => {
           if (cat) {
+            // 確保所有出現在歌曲中的分類也被添加到分類集合中
             newCategories.add(cat)
+            // 更新分類計數
             newCategoryCounts[cat] = (newCategoryCounts[cat] || 0) + 1
+
+            // 如果這個分類還沒有順序（不在 F 欄中），給它一個較大的順序值
+            if (newCategoryOrder[cat] === undefined) {
+              newCategoryOrder[cat] = 1000 + Object.keys(newCategoryOrder).length
+            }
           }
         })
       }
@@ -93,6 +115,7 @@ export default function SongLibrary() {
     setLanguages(newLanguages)
     setCategories(newCategories)
     setCategoryCounts(newCategoryCounts)
+    setCategoryOrder(newCategoryOrder)
   }
 
   const filterSongs = () => {
@@ -202,6 +225,7 @@ export default function SongLibrary() {
             categories={Array.from(categories)}
             selectedCategories={selectedCategories}
             categoryCounts={categoryCounts}
+            categoryOrder={categoryOrder}
             onToggleCategory={handleCategoryToggle}
             onClearCategories={clearCategories}
           />

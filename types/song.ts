@@ -11,3 +11,7 @@ export interface Song {
 export interface CategoryCount {
   [key: string]: number
 }
+
+export interface CategoryOrder {
+  [key: string]: number
+}
